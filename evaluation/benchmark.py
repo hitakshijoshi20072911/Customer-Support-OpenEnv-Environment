@@ -2,56 +2,71 @@ from env.environment import SupportEnv
 from env.models import Action
 from evaluation.metrics import MetricsCalculator
 from agents.baseline_agent import BaselineAgent
+from agents.llm_agent import LLMAgent
+from evaluation.leaderboard import Leaderboard
 
 
 class BenchmarkRunner:
 
     def __init__(self):
+
         self.env = SupportEnv()
-        self.metrics = MetricsCalculator()
-        self.agent = BaselineAgent()
+
+        self.agents = {
+            "Baseline Agent": BaselineAgent(),
+            "LLM Agent": LLMAgent()
+        }
+
+        self.leaderboard = Leaderboard()
 
     def run(self):
 
-        print("\nAgent Performance Report")
-        print("---------------------------")
+        print("\nRunning Benchmark for All Agents")
+        print("--------------------------------")
 
-        for task in self.env.tasks:
+        for agent_name, agent in self.agents.items():
 
-            observation = self.env.reset()
+            print(f"\nEvaluating {agent_name}")
 
-            done = False
-            total_reward = 0
+            metrics = MetricsCalculator()
 
-            while not done:
+            for task in self.env.tasks:
 
-                response = self.agent.act(task.query)
+                observation = self.env.reset()
 
-                try:
-                    category, priority, solution = response.split("|")
-                except:
-                    category = "general"
-                    priority = "medium"
-                    solution = "contact support"
+                done = False
+                total_reward = 0
 
-                action = Action(
-                    category=category.strip(),
-                    priority=priority.strip(),
-                    solution=solution.strip()
-                )
+                while not done:
 
-                observation, reward, done, info = self.env.step(action)
+                    response = agent.act(task.query)
 
-                total_reward += reward
+                    try:
+                        category, priority, solution = response.split("|")
+                    except:
+                        category = "general"
+                        priority = "medium"
+                        solution = "contact support"
 
-            self.metrics.update(total_reward)
+                    action = Action(
+                        category=category.strip(),
+                        priority=priority.strip(),
+                        solution=solution.strip()
+                    )
 
-        results = self.metrics.compute()
+                    observation, reward, done, info = self.env.step(action)
 
-        print(f"Tasks evaluated: {results['tasks']}")
-        print(f"Average reward: {results['average_reward']}")
-        print(f"Category accuracy: {results['category_accuracy']}")
-        print(f"Priority accuracy: {results['priority_accuracy']}")
+                    total_reward += reward
+
+                metrics.update(total_reward, task.difficulty)
+
+            results = metrics.compute()
+
+            print(f"Average Reward: {results['average_reward']}")
+
+            self.leaderboard.add_result(agent_name, results["average_reward"])
+
+        self.leaderboard.display()
 
 
 if __name__ == "__main__":

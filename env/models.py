@@ -11,7 +11,6 @@ class SupportTask(BaseModel):
     """
     Represents a single customer support task.
     """
-
     id: int
     query: str
     history: str
@@ -19,6 +18,7 @@ class SupportTask(BaseModel):
     category: str
     priority: str
     solution: str
+    difficulty: str
 
 
 class Action(BaseModel):
