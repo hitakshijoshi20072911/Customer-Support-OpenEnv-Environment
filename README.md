@@ -2,118 +2,60 @@
 
 ## Overview
 
-This project implements a **customer support simulation environment** designed for evaluating Large Language Model (LLM) agents using the **OpenEnv benchmarking framework**.
+Customer support automation is one of the most impactful applications of modern AI systems. Organizations across industries such as e-commerce, fintech, SaaS, and telecommunications handle thousands of user queries daily related to payments, account access, subscriptions, and order tracking.
 
-The environment models realistic customer support workflows where an AI agent must analyze user queries and determine appropriate actions to resolve issues. Each interaction is evaluated through a **programmatic grading system** that provides incremental rewards based on the correctness of the agent’s decision.
+This project implements a **Customer Support Simulation Environment built using the OpenEnv framework**, designed to evaluate how effectively AI agents can handle customer queries. The environment simulates real-world customer support tasks and evaluates the performance of automated agents using structured actions and reward-based feedback.
 
-The system enables benchmarking of LLM-based agents on structured problem-solving tasks commonly encountered in production support systems.
+Instead of simply building an AI chatbot, this project focuses on **building the environment where AI agents operate**, allowing systematic benchmarking of different agent strategies.
 
----
+The system enables evaluation of:
 
-# Motivation
+* Rule-based baseline agents
+* Large Language Model (LLM) powered agents
+* Future reinforcement learning agents
 
-Customer support automation is a major area of applied AI. Large organizations process millions of customer requests daily, including:
-
-* payment failures
-* refund requests
-* account recovery
-* order tracking
-* subscription management
-* technical troubleshooting
-
-Traditional rule-based chatbots struggle with the complexity and variability of real user queries.
-
-Recent advances in **Large Language Models and agent-based systems** allow AI agents to reason about customer issues and autonomously determine resolution strategies.
-
-This project creates a **controlled evaluation environment** to measure how effectively AI agents can perform these tasks.
+This makes the repository a **benchmarking framework for intelligent customer support systems**.
 
 ---
 
-# Environment Architecture
+# Environment Design
 
-The system follows the **OpenEnv environment interface**, which mirrors reinforcement learning environments used in modern AI research.
+The environment follows the **OpenEnv interaction pattern**, where an agent interacts with the environment using the following cycle:
 
-Core components include:
+Agent → Observation → Action → Environment → Reward → Next Observation
 
-```
-env/
- ├ models.py        → Pydantic schemas for observations and actions
- ├ tasks.py         → dataset of support tasks
- ├ grader.py        → scoring and reward logic
- └ environment.py   → OpenEnv environment implementation
-```
+### Environment Workflow
 
-An **inference agent** interacts with the environment and produces actions based on the current observation.
+1. A customer support query is presented as an observation.
+2. The agent analyzes the query.
+3. The agent selects a structured action.
+4. The environment evaluates the action.
+5. A reward score is assigned based on correctness.
 
-```
-inference.py
-```
-
-This script runs the agent against the environment and outputs evaluation results in a structured format required by the OpenEnv evaluation pipeline.
-
----
-
-# OpenEnv Interface
-
-The environment implements the required OpenEnv methods:
-
-### reset()
-
-Initializes the environment and returns the first observation.
-
-```
-observation = env.reset()
-```
-
-### step(action)
-
-Executes an agent action and returns:
-
-```
-observation, reward, done, info
-```
-
-* **observation** → next environment state
-* **reward** → score from 0.0 to 1.0
-* **done** → indicates task completion
-* **info** → metadata about evaluation
-
-### state()
-
-Returns the current internal state of the environment.
+This loop continues until the task is completed.
 
 ---
 
 # Observation Space
 
-Each observation represents a customer support request.
+Each observation contains the **customer support query** describing the user's problem.
 
 Example:
 
 ```
-{
-  "query": "My payment failed but money was deducted."
-}
+"My payment failed but money was deducted."
 ```
 
-The agent must interpret the request and decide the correct action.
-
-Observation features include:
-
-* customer query text
-* conversation context
-* environment state
+The agent must interpret this query and determine the correct action.
 
 ---
 
 # Action Space
 
-The agent outputs structured actions representing a support resolution strategy.
-
-Format:
+Agents must output a structured action in the format:
 
 ```
-category | priority | resolution
+category | priority | solution
 ```
 
 Example:
@@ -122,180 +64,242 @@ Example:
 payment | high | initiate refund
 ```
 
-Components:
+### Action Components
 
-| Field      | Description          |
-| ---------- | -------------------- |
-| category   | issue classification |
-| priority   | urgency level        |
-| resolution | recommended action   |
+| Component | Description            |
+| --------- | ---------------------- |
+| Category  | Type of support issue  |
+| Priority  | Urgency of the request |
+| Solution  | Suggested resolution   |
 
 ---
 
 # Task Dataset
 
-The environment includes a dataset of customer support tasks representing realistic service scenarios.
+The environment includes a dataset of **10 simulated customer support tasks**, representing common real-world issues.
 
-| Task                      | Difficulty |
-| ------------------------- | ---------- |
-| Refund request            | Easy       |
-| Password reset            | Medium     |
-| Subscription cancellation | Medium     |
-| Order tracking            | Medium     |
-| Duplicate payment         | Hard       |
+| Task Type          | Example                        |
+| ------------------ | ------------------------------ |
+| Payment Issues     | Refund or failed transactions  |
+| Account Management | Password reset or login issues |
+| Billing            | Subscription changes           |
+| Order Tracking     | Delivery related queries       |
+| Technical Support  | System or platform errors      |
 
-Each task defines:
-
-* user query
-* expected category
-* correct resolution
-* priority level
+These tasks simulate realistic support interactions seen in modern digital platforms.
 
 ---
 
-# Reward Function
+# Reward System
 
-The grading system evaluates actions using deterministic rules.
+The environment evaluates the correctness of the agent's response using a reward-based scoring mechanism.
 
-Rewards range from **0.0 to 1.0**.
+Typical evaluation factors include:
 
-Evaluation criteria include:
+* Correct issue classification
+* Correct priority level
+* Correct resolution
 
-* correct issue classification
-* appropriate priority level
-* correct resolution strategy
+Example reward distribution:
 
-Example scoring:
+| Evaluation Component | Reward |
+| -------------------- | ------ |
+| Correct category     | +0.4   |
+| Correct priority     | +0.3   |
+| Correct solution     | +0.3   |
 
-```
-Correct category → +0.4
-Correct priority → +0.3
-Correct solution → +0.3
-```
+Total possible reward per task: **1.0**
 
-This design provides **incremental feedback** to guide agent behavior.
+This reward system allows **quantitative benchmarking of AI support agents**.
 
 ---
 
 # Baseline Agent
 
-The project includes a baseline inference agent using the **OpenAI API client**.
+To establish a performance reference, the project includes a **rule-based baseline agent**.
 
-The agent interacts with the environment and attempts to resolve tasks using an LLM.
+The baseline agent uses simple keyword heuristics to classify queries and generate structured actions.
 
-Baseline configuration:
+Example logic:
 
 ```
-Model: Meta-Llama-3-8B-Instruct
-API: HuggingFace Router (OpenAI-compatible)
+If query contains "refund" → payment issue
+If query contains "password" → account issue
+If query contains "subscription" → billing issue
+```
+
+This baseline allows comparison between:
+
+* Simple rule-based systems
+* LLM-powered agents
+* Future reinforcement learning agents
+
+---
+
+# Benchmarking System
+
+The repository includes a **benchmark evaluation pipeline** to measure agent performance across all tasks.
+
+The benchmark runner:
+
+1. Loads all tasks
+2. Runs the agent on each task
+3. Collects rewards
+4. Computes performance metrics
+
+Example output:
+
+```
+Agent Performance Report
+---------------------------
 Tasks evaluated: 10
-Average reward: ~0.14
+Average reward: 0.32
+Category accuracy: 0.50
+Priority accuracy: 0.40
 ```
 
-The inference script outputs results in the format required by the OpenEnv evaluation system.
-
-Example:
-
-```
-[START] task=support_task env=customer-support-env model=meta-llama/Meta-Llama-3-8B-Instruct
-[STEP] step=1 action=payment|high|initiate refund reward=1.00 done=false error=null
-[STEP] step=2 action=account|medium|reset password reward=0.80 done=false error=null
-[END] success=true steps=2 rewards=1.00,0.80
-```
+These metrics allow comparison between different agent architectures.
 
 ---
 
-# Deployment
-
-The environment is containerized and deployable on **Hugging Face Spaces** using Docker.
-
-Hardware constraints:
+# Project Structure
 
 ```
-2 vCPU
-8GB RAM
+Customer-Support-OpenEnv-Environment
+│
+├── agents
+│   ├── baseline_agent.py
+│   └── llm_agent.py
+│
+├── env
+│   ├── environment.py
+│   ├── tasks.py
+│   ├── models.py
+│   └── grader.py
+│
+├── evaluation
+│   ├── benchmark.py
+│   └── metrics.py
+│
+├── inference.py
+├── test_env.py
+├── requirements.txt
+├── openenv.yaml
+└── Dockerfile
 ```
 
-Deployment files:
+### Folder Explanation
 
-```
-Dockerfile
-openenv.yaml
-requirements.txt
-```
+**env/**
+Contains the OpenEnv environment implementation, task definitions, and reward grading logic.
 
----
+**agents/**
+Contains agent implementations including baseline rule-based agents and LLM-powered agents.
 
-# Setup
-
-Install dependencies:
-
-```
-pip install -r requirements.txt
-```
-
-Set environment variables:
-
-```
-HF_TOKEN=your_token
-API_BASE_URL=https://router.huggingface.co/v1
-MODEL_NAME=meta-llama/Meta-Llama-3-8B-Instruct
-```
-
-Run the environment:
-
-```
-python inference.py
-```
+**evaluation/**
+Provides benchmarking utilities to measure agent performance.
 
 ---
 
 # Real-World Applications
 
-This environment can be used to evaluate AI systems designed for:
+This system can be applied to several real-world scenarios:
 
-* automated customer support agents
-* enterprise helpdesk automation
-* AI-powered service desks
-* intelligent ticket triaging systems
-* support workflow optimization
+### AI Customer Support Assistants
 
-Organizations such as e-commerce platforms, fintech companies, and SaaS providers could leverage similar systems to reduce support costs while improving response quality.
+Evaluate automated support agents before deploying them in production.
 
----
+### Model Benchmarking
 
-# Societal Impact
+Compare different LLMs or AI agents on structured support tasks.
 
-AI-driven support automation has the potential to:
+### Reinforcement Learning Research
 
-* reduce response times for customer issues
-* provide 24/7 support availability
-* reduce operational costs for businesses
-* improve accessibility of services
+Use the environment as a training ground for RL agents learning customer support workflows.
 
-However, responsible deployment is critical to ensure:
+### Smart Helpdesk Systems
 
-* fairness in automated decision-making
-* accurate handling of sensitive customer data
-* escalation to human agents when necessary
-
-Benchmark environments such as this help ensure AI systems are **tested, measurable, and reliable before deployment**.
+Improve automated helpdesk routing and resolution strategies.
 
 ---
 
-# Future Improvements
+# Impact
 
-Planned extensions include:
+AI-driven customer support systems can significantly improve operational efficiency.
 
-* large-scale task datasets
-* evaluation metrics and benchmarking tools
-* multi-agent comparison frameworks
-* leaderboard-based evaluation
+Potential benefits include:
 
-These additions will transform the project into a **comprehensive research benchmark for support automation agents**.
+* Reduced response times
+* Lower support operational costs
+* Scalable support infrastructure
+* Improved customer satisfaction
+
+Benchmark environments like this help ensure **AI systems are reliable before deployment**.
+
+---
+
+# Current Features
+
+✔ OpenEnv-compatible customer support environment
+✔ Structured action space for AI agents
+✔ Reward-based evaluation system
+✔ Rule-based baseline agent
+✔ Benchmark evaluation pipeline
+
+---
+
+# Planned Improvements (Future Work)
+
+The following improvements are planned to expand the project:
+
+### Multi-Agent Benchmarking
+
+Compare performance of multiple agents including different LLM models.
+
+### Intelligent Action Parsing
+
+Convert natural language responses from LLMs into structured actions automatically.
+
+### Task Difficulty System
+
+Introduce difficulty levels (easy / medium / hard) for better benchmarking.
+
+### Agent Leaderboard
+
+Create a performance leaderboard comparing different agent architectures.
+
+### Reinforcement Learning Integration
+
+Train RL agents directly within the environment.
+
+---
+
+# Getting Started
+
+### Install dependencies
+
+```
+pip install -r requirements.txt
+```
+
+### Run the benchmark
+
+```
+python -m evaluation.benchmark
+```
+
+This will evaluate the baseline agent across all customer support tasks.
+
+---
+
+# Repository
+
+GitHub Repository:
+
+https://github.com/hitakshijoshi20072911/Customer-Support-OpenEnv-Environment
 
 ---
 
 # License
 
-This project was developed for the **Meta OpenEnv Hackathon**.
+This project is intended for research and educational purposes.
